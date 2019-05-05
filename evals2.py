@@ -14,10 +14,11 @@ class CosDist(nn.Module):
         return 1 - (nx * ny).sum()
 
 class Objective(nn.Module):
-    def __init__(self, vocab, repr_size, comp_fn, err_fn):
+    def __init__(self, vocab, repr_size, comp_fn, err_fn, zero_init):
         super().__init__()
         self.emb = nn.Embedding(len(vocab), repr_size)
-        self.emb.weight.data.zero_()
+        if zero_init:
+            self.emb.weight.data.zero_()
         self.comp = comp_fn
         self.err = err_fn
 
@@ -30,7 +31,7 @@ class Objective(nn.Module):
     def forward(self, rep, expr):
         return self.err(self.compose(expr), rep)
 
-def evaluate(reps, exprs, comp_fn, err_fn, quiet=False, steps=400, include_pred=False):
+def evaluate(reps, exprs, comp_fn, err_fn, quiet=False, steps=400, include_pred=False, zero_init=True):
     vocab = {}
     for expr in exprs:
         toks = flatten(expr)
@@ -46,7 +47,7 @@ def evaluate(reps, exprs, comp_fn, err_fn, quiet=False, steps=400, include_pred=
     treps = [torch.FloatTensor([r]) for r in reps]
     texprs = [index(e) for e in exprs]
 
-    obj = Objective(vocab, reps[0].size, comp_fn, err_fn)
+    obj = Objective(vocab, reps[0].size, comp_fn, err_fn, zero_init)
     opt = optim.RMSprop(obj.parameters(), lr=0.01)
 
     for t in range(steps):
